@@ -1,0 +1,15 @@
+services:
+  sluga-agent:
+    build: .
+    container_name: sluga-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./skills:/app/skills:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M

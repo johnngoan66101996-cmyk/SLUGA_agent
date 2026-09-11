@@ -1,0 +1,10 @@
+# Минимальные ультралегковесные зависимости агента SLUGA
+# Потребление памяти в рантайме: ~60-90 МБ RAM (идеально для VPS с 512 МБ - 1 ГБ)
+
+aiogram>=3.13.0
+httpx>=0.27.0
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+beautifulsoup4>=4.12.3
+apscheduler>=3.10.4
+python-dotenv>=1.0.1

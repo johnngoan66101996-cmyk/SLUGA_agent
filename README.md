@@ -74,7 +74,7 @@ cp .env.example .env
 # Основной провайдер: LiteAI (https://liteai.tech/)
 LITEAI_API_KEY=твой_ключ_liteai
 LITEAI_BASE_URL=https://api.liteai.tech/v1
-LITEAI_MODEL=claude-3-5-sonnet-20241022
+LITEAI_MODEL=claude-sonnet-4-6
 
 # Резервный провайдер: Google AI Studio через твой Cloudflare Worker
 GOOGLE_AI_STUDIO_API_KEY=твой_ключ_google_ai_studio

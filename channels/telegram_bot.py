@@ -6,21 +6,46 @@ Telegram-канал связи агента SLUGA.
 
 import logging
 import io
+import html
+import json
 import httpx
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.filters import Command
-from config import settings
+from config import settings, BASE_DIR
 from core.engine import SlugaEngine
 from tools.project_doctor import diagnose_project
 from tools.voice_handler import transcribe_voice, synthesize_voice
 
 logger = logging.getLogger("SLUGA_TELEGRAM")
 
-# Хранилище настроек голосового ответа по чатам (по умолчанию включен)
-chat_voice_settings = {}
+# Персистентное хранилище настроек голосового ответа по чатам (сохраняется в data/voice_settings.json)
+VOICE_SETTINGS_FILE = BASE_DIR / "data" / "voice_settings.json"
+
+def get_voice_setting(chat_id: int) -> bool:
+    try:
+        if VOICE_SETTINGS_FILE.exists():
+            with open(VOICE_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get(str(chat_id), True)
+    except Exception:
+        pass
+    return True
+
+def set_voice_setting(chat_id: int, enabled: bool):
+    try:
+        data = {}
+        if VOICE_SETTINGS_FILE.exists():
+            with open(VOICE_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        data[str(chat_id)] = enabled
+        VOICE_SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(VOICE_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.warning(f"Не удалось сохранить настройку голоса: {e}")
 
 async def check_liteai_stats(api_key: str) -> dict:
     """Запрос статистики ключа и расхода токенов с сервиса LiteAI (liteai.tech/api/stats)"""
@@ -257,13 +282,13 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
         parts = msg.text.split()
         chat_id = msg.chat.id
         if len(parts) >= 2 and parts[1].lower() in ["off", "0", "false", "выкл"]:
-            chat_voice_settings[chat_id] = False
+            set_voice_setting(chat_id, False)
             await msg.answer("🔇 Голосовые ответы отключены. Агент будет отвечать только текстом.")
         elif len(parts) >= 2 and parts[1].lower() in ["on", "1", "true", "вкл"]:
-            chat_voice_settings[chat_id] = True
+            set_voice_setting(chat_id, True)
             await msg.answer("🎙️ Голосовые ответы включены. Агент будет озвучивать суть ответов.")
         else:
-            cur = "включены" if chat_voice_settings.get(chat_id, True) else "отключены"
+            cur = "включены" if get_voice_setting(chat_id) else "отключены"
             await msg.answer(
                 f"🎙️ Статус голосовых ответов: **{cur}**.\n\n"
                 "Управление:\n"
@@ -287,15 +312,27 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
             )
 
             # Голосовой ответ при включенном режиме
-            should_voice = chat_voice_settings.get(msg.chat.id, True)
+            should_voice = get_voice_setting(msg.chat.id)
             if should_voice and is_voice_input:
                 try:
                     await status_msg.edit_text("🎙️ Синтезирую голосовой ответ...")
                     voice_bytes = await synthesize_voice(response)
-                    await msg.answer_voice(
-                        voice=types.BufferedInputFile(voice_bytes, filename="sluga_voice.mp3"),
-                        caption="🎙️ Голосовой ответ SLUGA"
-                    )
+                    # Edge-TTS возвращает аудиопоток MP3. Пробуем answer_voice, при ошибке отправляем через answer_audio
+                    voice_file = types.BufferedInputFile(voice_bytes, filename="sluga_voice.mp3")
+                    try:
+                        await msg.answer_voice(
+                            voice=voice_file,
+                            caption="🎙️ Голосовой ответ SLUGA"
+                        )
+                    except Exception as voice_err:
+                        logger.warning(f"answer_voice сбой ({voice_err}), отправляю через answer_audio...")
+                        audio_file = types.BufferedInputFile(voice_bytes, filename="sluga_voice.mp3")
+                        await msg.answer_audio(
+                            audio=audio_file,
+                            title="Голосовой ответ SLUGA",
+                            performer="SLUGA",
+                            caption="🎙️ Голосовой ответ SLUGA"
+                        )
                 except Exception as ve:
                     logger.warning(f"Ошибка синтеза речи Edge-TTS: {ve}")
 
@@ -332,7 +369,14 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
             mime_type = getattr(voice_obj, 'mime_type', 'audio/ogg') or 'audio/ogg'
             user_prompt = await transcribe_voice(audio_bytes, mime_type=mime_type)
 
-            await status_msg.edit_text(f"🗣️ **Вы сказали:** «_{user_prompt}_»\n\n🧠 SLUGA принял задачу в обработку...", parse_mode="Markdown")
+            # Безопасное отображение распознанного текста с защитой от Markdown-инъекций и ограничением длины
+            display_text = user_prompt[:1000] + ("..." if len(user_prompt) > 1000 else "")
+            safe_text = html.escape(display_text)
+
+            await status_msg.edit_text(
+                f"🗣️ <b>Вы сказали:</b> «<i>{safe_text}</i>»\n\n🧠 SLUGA принял задачу в обработку...",
+                parse_mode="HTML"
+            )
 
             await _process_and_reply(msg, session_id, user_prompt, status_msg, is_voice_input=True)
 
@@ -360,9 +404,9 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
     @dp.message(F.text == "🎙️ Голос (Вкл/Выкл)")
     async def btn_voice(msg: types.Message):
         chat_id = msg.chat.id
-        current = chat_voice_settings.get(chat_id, True)
+        current = get_voice_setting(chat_id)
         new_state = not current
-        chat_voice_settings[chat_id] = new_state
+        set_voice_setting(chat_id, new_state)
         status_text = "включены 🎙️" if new_state else "отключены 🔇"
         await msg.answer(f"Голосовые ответы теперь **{status_text}**.", parse_mode="Markdown")
 

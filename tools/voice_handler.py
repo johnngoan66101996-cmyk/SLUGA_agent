@@ -4,14 +4,11 @@
 2. TTS (Text-to-Speech): Высококачественный синтез реалистичной русской речи через Microsoft Edge-TTS (без API ключей, бесплатно).
 """
 
-import os
 import re
 import io
 import base64
 import logging
-import tempfile
 import httpx
-from typing import Optional
 
 from config import settings
 
@@ -62,6 +59,10 @@ async def transcribe_voice(audio_bytes: bytes, mime_type: str = "audio/ogg") -> 
     1. Google Gemini Multimodal (прямой прием audio/ogg через CF прокси или напрямую)
     2. Whisper через LiteAI / OpenAI-совместимый API
     """
+    # Проверка на пустой или поврежденный поток
+    if not audio_bytes or len(audio_bytes) < 100:
+        raise ValueError("Голосовой файл пустой или повреждён (размер < 100 байт).")
+
     # 1. Попытка через Google AI Studio (Gemini 3.7 / 3.6 / Flash)
     if settings.google_ai_studio_api_key:
         try:
@@ -123,8 +124,22 @@ async def transcribe_voice(audio_bytes: bytes, mime_type: str = "audio/ogg") -> 
             whisper_url = f"{settings.liteai_base_url.rstrip('/')}/audio/transcriptions"
             headers = {"Authorization": f"Bearer {settings.liteai_api_key}"}
             
+            # Корректное расширение в зависимости от реального mime_type
+            ext_map = {
+                "audio/ogg": "voice.ogg",
+                "audio/opus": "voice.ogg",
+                "audio/mpeg": "voice.mp3",
+                "audio/mp3": "voice.mp3",
+                "audio/mp4": "voice.m4a",
+                "audio/x-m4a": "voice.m4a",
+                "audio/wav": "voice.wav",
+                "audio/x-wav": "voice.wav",
+                "audio/webm": "voice.webm",
+            }
+            file_name = ext_map.get(mime_type.lower(), "voice.ogg")
+
             files = {
-                "file": ("voice.ogg", audio_bytes, mime_type)
+                "file": (file_name, audio_bytes, mime_type)
             }
             data = {
                 "model": "whisper-1",

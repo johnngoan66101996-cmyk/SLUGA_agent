@@ -192,19 +192,20 @@ def run_wizard():
     print("=" * 72)
 
     run_opts = [
+        "Запустить Telegram-демона в фоновом режиме 24/7 [Рекомендуется]",
         "Запустить интерактивный консольный диалог (CLI прямо сейчас)",
-        "Запустить Telegram-демона в фоновом режиме",
-        "Выйти в терминал"
+        "Выйти в терминал (запустить позже командой: sluga start)"
     ]
     r_idx = ask_choice("Как запустить агента?", run_opts, default_idx=0)
     if r_idx == 0:
-        os.system(f'"{sys.executable}" main.py cli')
+        os.system(f'"{sys.executable}" main.py start')
     elif r_idx == 1:
-        os.system(f'"{sys.executable}" main.py bot')
+        os.system(f'"{sys.executable}" main.py cli')
     else:
-        print("\nГотово. Вы можете запустить агента в любой момент:")
-        print("  python main.py cli  (для терминала)")
-        print("  python main.py bot  (для Telegram-бота)")
+        print("\nГотово. Вы можете управлять агентом в любой момент:")
+        print("  sluga start   (или python main.py start) — запуск в фоне 24/7")
+        print("  sluga status  (или python main.py status) — статус работы")
+        print("  sluga stop    (или python main.py stop) — остановка")
 
 if __name__ == "__main__":
     run_wizard()

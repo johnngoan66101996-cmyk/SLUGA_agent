@@ -5,6 +5,8 @@
 2. Прямой терминальный CLI-режим: `python main.py cli`
 """
 
+from __future__ import annotations
+
 import sys
 import asyncio
 import logging
@@ -33,7 +35,7 @@ def mask_key(k: str) -> str:
         return "***"
     return f"{k[:5]}...{k[-4:]}"
 
-async def run_cli_mode(engine: SlugaEngine):
+async def run_cli_mode(engine):
     print("=" * 70)
     print("🤖 АВТОНОМНЫЙ АГЕНТ-ХИРУРГ SLUGA (CLI MODE)")
     print("=" * 70)
@@ -181,7 +183,7 @@ async def run_bot_mode(engine):
         daemon.stop()
         await bot.session.close()
 
-async def run_single_prompt(engine: SlugaEngine, prompt: str):
+async def run_single_prompt(engine, prompt: str):
     print(f"\n⚙️ Обработка задачи: {prompt}\n")
     async def cli_status(text):
         print(f"  {text}")

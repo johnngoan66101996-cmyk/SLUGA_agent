@@ -50,7 +50,10 @@ if ($detectedPath -and ($choice -eq "" -or $choice -eq "1")) {
     if ($custom.Trim()) { $targetDir = $custom.Trim() }
 }
 
-if (-not (Test-Path $targetDir)) {
+# Очистка от окружающих кавычек
+$targetDir = $targetDir.Trim().Trim('"').Trim("'")
+
+if (-not (Test-Path -LiteralPath $targetDir)) {
     Write-Host "`n⚠️ Папка $targetDir не существует. Возможно, агент уже удален." -ForegroundColor Yellow
     exit 0
 }

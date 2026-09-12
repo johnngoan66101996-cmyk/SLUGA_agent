@@ -39,10 +39,13 @@ if ($choice -eq "2") {
     $targetDir = "C:\SLUGA_agent"
 }
 
+# Очистка от окружающих кавычек (если пользователь вставил путь с кавычками, например "C:\Папка")
+$targetDir = $targetDir.Trim().Trim('"').Trim("'")
+
 Write-Host "`n🎯 Целевая папка установки: $targetDir" -ForegroundColor Cyan
 
 # 2. Создание папки, если ее нет
-if (-not (Test-Path $targetDir)) {
+if (-not (Test-Path -LiteralPath $targetDir)) {
     Write-Host "📦 Создаю директорию $targetDir..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 }

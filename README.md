@@ -221,3 +221,57 @@ python main.py cli
      ```
    - Либо пропишите в `.env`: `LITEAI_API_KEY=твой_ключ_liteai`.
    - Агент автоматически начнет работать через стабильный шлюз Claude, а Gemini останется резервным каналом.
+
+---
+
+## 🗑️ Полное удаление и деинсталляция (Uninstallation)
+
+Если вам необходимо полностью удалить агента SLUGA, его виртуальное окружение `.venv`, локальную базу SQLite и конфигурацию, выберите подходящий вариант:
+
+### Способ 1: Удаление в 1 команду на Windows (PowerShell)
+Запустите PowerShell и выполните команду онлайн-деинсталлятора:
+```powershell
+irm https://raw.githubusercontent.com/johnngoan66101996-cmyk/SLUGA_agent/main/uninstall.ps1 | iex
+```
+> 💡 *Скрипт автоматически обнаружит установку, корректно завершит процессы агента, запросит подтверждение и чисто удалит папку агента (по умолчанию `C:\SLUGA_agent` или на Рабочем столе).*
+
+#### Ручное удаление в PowerShell:
+```powershell
+# 1. Завершить активные процессы агента:
+Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*SLUGA_agent*" -or $_.CommandLine -like "*main.py*" } | Stop-Process -Force
+
+# 2. Удалить папку со всеми файлами (C:\SLUGA_agent или указанный вами путь):
+Remove-Item -Path "C:\SLUGA_agent" -Recurse -Force
+```
+
+---
+
+### Способ 2: Удаление в 1 команду на Linux / VPS (Bash)
+Выполните команду онлайн-деинсталлятора в терминале:
+```bash
+curl -fsSL https://raw.githubusercontent.com/johnngoan66101996-cmyk/SLUGA_agent/main/uninstall.sh | bash
+```
+
+#### Ручное удаление в Linux:
+```bash
+# 1. Завершить процессы агента:
+pkill -f "python.*main.py" || true
+
+# 2. Удалить директорию агента:
+rm -rf "$HOME/SLUGA_agent"
+```
+
+---
+
+### Способ 3: Удаление при установке через Docker Compose
+Если агент был развернут через Docker на сервере:
+```bash
+# 1. Перейти в папку проекта:
+cd ~/SLUGA_agent
+
+# 2. Остановить контейнеры, удалить сеть, тома и образы:
+docker compose down -v --rmi all
+
+# 3. Удалить файлы проекта:
+cd ~ && rm -rf ~/SLUGA_agent
+```

@@ -8,7 +8,6 @@
 import sys
 import asyncio
 import logging
-from aiogram import Dispatcher
 
 # Обеспечение корректного вывода UTF-8 (включая эмодзи) на Windows-терминалах
 if sys.platform == "win32":
@@ -19,9 +18,6 @@ if sys.platform == "win32":
         pass
 
 from config import settings
-from core.engine import SlugaEngine
-from channels.telegram_bot import create_bot, setup_router
-from daemons.scheduler import SlugaDaemon
 
 # Настройка логирования
 logging.basicConfig(
@@ -160,11 +156,15 @@ async def run_cli_mode(engine: SlugaEngine):
                 logger.exception("Ошибка в CLI режиме")
             print(f"\n❌ {e}")
 
-async def run_bot_mode(engine: SlugaEngine):
+async def run_bot_mode(engine):
     if not settings.telegram_bot_token:
         logger.warning("TELEGRAM_BOT_TOKEN не задан в .env! Переключение в CLI-режим...")
         await run_cli_mode(engine)
         return
+
+    from aiogram import Dispatcher
+    from channels.telegram_bot import create_bot, setup_router
+    from daemons.scheduler import SlugaDaemon
 
     logger.info("Инициализация Telegram бота и фонового демона...")
     bot = create_bot()
@@ -196,22 +196,52 @@ async def run_single_prompt(engine: SlugaEngine, prompt: str):
         print(f"\n❌ Ошибка: {e}\n")
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1].lower() in ["setup", "wizard"]:
+    cmd = sys.argv[1].lower() if len(sys.argv) > 1 else ""
+
+    if cmd in ["setup", "wizard"]:
         import wizard
         wizard.run_wizard()
         return
 
-    if len(sys.argv) > 1 and sys.argv[1].lower() == "doctor":
+    if cmd == "doctor":
         from tools.project_doctor import diagnose_project
         import json
         print("\n🩺 МРТ Проекта:")
         print(json.dumps(diagnose_project("."), ensure_ascii=False, indent=2))
         return
 
+    # Управление фоновым демоном 24/7 (по аналогии с Hermes / PM2)
+    if cmd == "start":
+        from daemons.daemon_manager import start_daemon
+        start_daemon()
+        return
+
+    if cmd == "stop":
+        from daemons.daemon_manager import stop_daemon
+        stop_daemon()
+        return
+
+    if cmd == "restart":
+        from daemons.daemon_manager import restart_daemon
+        restart_daemon()
+        return
+
+    if cmd in ["status", "ps"]:
+        from daemons.daemon_manager import status_daemon
+        status_daemon()
+        return
+
+    if cmd in ["logs", "log"]:
+        from daemons.daemon_manager import show_logs
+        lines = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 40
+        show_logs(lines)
+        return
+
+    from core.engine import SlugaEngine
     engine = SlugaEngine()
 
-    # 1. Запуск Telegram бота: sluga bot
-    if len(sys.argv) > 1 and sys.argv[1].lower() in ["bot", "daemon"]:
+    # Запуск Telegram бота в текущем терминале: sluga bot
+    if cmd in ["bot", "daemon"]:
         asyncio.run(run_bot_mode(engine))
     # 2. Вызов разовой команды: sluga "напиши калькулятор"
     elif len(sys.argv) > 1 and sys.argv[1].lower() != "cli":

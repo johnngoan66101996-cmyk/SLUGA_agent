@@ -78,9 +78,14 @@ function sluga {
 
 Write-Host "✅ Развертывание завершено!" -ForegroundColor Green
 Write-Host "`n🚀 ТЕПЕРЬ АГЕНТ ЗАПУСКАЕТСЯ ИЗ ЛЮБОЙ ПАПКИ КАК CLAUDE / HERMES:" -ForegroundColor Yellow
+Write-Host "   sluga start             — запуск фонового демона 24/7 (работает без терминала)" -ForegroundColor Green
+Write-Host "   sluga status            — статус демона (работает/остановлен, PID, логи)" -ForegroundColor Green
+Write-Host "   sluga stop              — остановка фонового демона" -ForegroundColor Green
+Write-Host "   sluga restart           — перезапуск фонового демона" -ForegroundColor Green
+Write-Host "   sluga logs              — просмотр свежих логов" -ForegroundColor Green
+Write-Host "   sluga bot               — запуск бота прямо в консоли (для отладки)" -ForegroundColor Green
 Write-Host "   sluga                   — запуск интерактивной консоли CLI" -ForegroundColor Green
 Write-Host "   sluga `"задача`"          — выполнение разовой задачи" -ForegroundColor Green
-Write-Host "   sluga bot               — запуск Telegram-демона" -ForegroundColor Green
 Write-Host "   sluga doctor            — экспресс-диагностика проекта" -ForegroundColor Green
 Write-Host "   sluga setup             — запуск мастера настройки" -ForegroundColor Green
 

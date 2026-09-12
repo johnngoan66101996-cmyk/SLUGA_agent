@@ -12,6 +12,9 @@ echo "========================================================================"
 TARGET_DIR="$HOME/SLUGA_agent"
 echo "🎯 Установка в директорию: $TARGET_DIR"
 
+# Остановка старого процесса из памяти для предотвращения TelegramConflictError
+pkill -f "python.*main.py" 2>/dev/null || true
+
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 

@@ -62,21 +62,20 @@ cat << EOF > "$BIN_DIR/sluga"
 EOF
 chmod +x "$BIN_DIR/sluga"
 
-# Автодобавление ~/.local/bin в PATH пользователя
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    if [ -f "$HOME/.bashrc" ] && ! grep -q 'HOME/.local/bin' "$HOME/.bashrc"; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+# Автодобавление ~/.local/bin в PATH пользователя (для любых оболочек и хостингов)
+for prof in "$HOME/.bashrc" "$HOME/.profile" "$HOME/.bash_profile"; do
+    if [ ! -f "$prof" ] || ! grep -q 'HOME/.local/bin' "$prof"; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$prof"
     fi
-    if [ -f "$HOME/.profile" ] && ! grep -q 'HOME/.local/bin' "$HOME/.profile"; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.profile"
-    fi
-    export PATH="$HOME/.local/bin:$PATH"
-fi
+done
+export PATH="$HOME/.local/bin:$PATH"
 
-# 7. Автоматический запуск фонового демона 24/7
-echo ""
-echo "🚀 Запуск автономного демона SLUGA 24/7..."
-"$CURRENT_DIR/.venv/bin/python" "$CURRENT_DIR/main.py" start
+# 7. Автоматический запуск фонового демона 24/7 (если еще не запущен мастером)
+if ! "$CURRENT_DIR/.venv/bin/python" -c 'from daemons.daemon_manager import get_running_pid; exit(0 if get_running_pid() else 1)' 2>/dev/null; then
+    echo ""
+    echo "🚀 Запуск автономного демона SLUGA 24/7..."
+    "$CURRENT_DIR/.venv/bin/python" "$CURRENT_DIR/main.py" start
+fi
 
 echo ""
 echo "✅ Развертывание успешно завершено!"

@@ -55,12 +55,25 @@
 
 ---
 
-## 🚀 Быстрый Старт
+## 🚀 Быстрый Старт (Установка в 1 команду)
 
-### 1. Клонирование с GitHub
+### Способ 1: Установка в 1 команду через PowerShell (Windows)
+> 💡 Работает из **любой** папки (включая System32). Скрипт сам предложит выбор (например, `C:\SLUGA_agent` или Рабочий стол) и всё настроит:
+```powershell
+irm https://raw.githubusercontent.com/johnngoan66101996-cmyk/SLUGA_agent/main/install.ps1 | iex
+```
+
+### Способ 2: Установка в 1 команду на Linux / VPS
 ```bash
-git clone <URL_ТВОЕГО_РЕПОЗИТОРИЯ>
-cd <ПАПКА_РЕПОЗИТОРИЯ>
+curl -fsSL https://raw.githubusercontent.com/johnngoan66101996-cmyk/SLUGA_agent/main/install.sh | bash
+```
+
+---
+
+### Способ 3: Ручное клонирование с GitHub
+```bash
+git clone https://github.com/johnngoan66101996-cmyk/SLUGA_agent.git
+cd SLUGA_agent
 ```
 
 ### 2. Настройка окружения
@@ -74,7 +87,7 @@ cp .env.example .env
 # Основной провайдер: LiteAI (https://liteai.tech/)
 LITEAI_API_KEY=твой_ключ_liteai
 LITEAI_BASE_URL=https://api.liteai.tech/v1
-LITEAI_MODEL=claude-sonnet-4-6
+LITEAI_MODEL=claude-3-5-sonnet-20241022
 
 # Резервный провайдер: Google AI Studio через твой Cloudflare Worker
 GOOGLE_AI_STUDIO_API_KEY=твой_ключ_google_ai_studio

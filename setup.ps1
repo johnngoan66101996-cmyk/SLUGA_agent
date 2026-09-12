@@ -41,11 +41,12 @@ if (-not (Test-Path "data")) {
 Write-Host "🔗 Регистрация глобальной команды 'sluga' в системе..." -ForegroundColor Yellow
 $cmdContent = @"
 @echo off
+chcp 65001 >nul
 setlocal
 "$PSScriptRoot\.venv\Scripts\python.exe" "$PSScriptRoot\main.py" %*
 endlocal
 "@
-Set-Content -Path "$PSScriptRoot\sluga.cmd" -Value $cmdContent -Encoding ASCII
+[System.IO.File]::WriteAllText("$PSScriptRoot\sluga.cmd", $cmdContent, [System.Text.Encoding]::UTF8)
 
 # Добавляем папку агента в User PATH, если еще не добавлено
 $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
@@ -57,7 +58,22 @@ if ($userPath -notlike "*$PSScriptRoot*") {
 # Копируем в WindowsApps для немедленной доступности в любых окнах терминала
 $winApps = "$env:LOCALAPPDATA\Microsoft\WindowsApps"
 if (Test-Path $winApps) {
-    Set-Content -Path "$winApps\sluga.cmd" -Value $cmdContent -Encoding ASCII
+    [System.IO.File]::WriteAllText("$winApps\sluga.cmd", $cmdContent, [System.Text.Encoding]::UTF8)
+}
+
+# Добавляем функцию sluga в профиль PowerShell
+if ($PROFILE -and (Test-Path $PROFILE)) {
+    $prof = Get-Content -Path $PROFILE -Raw
+    if ($prof -notmatch "function sluga") {
+        $func = @"
+
+# Запуск SLUGA агента из любой папки (как claude / hermes)
+function sluga {
+    & "$PSScriptRoot\.venv\Scripts\python.exe" "$PSScriptRoot\main.py" `$args
+}
+"@
+        Add-Content -Path $PROFILE -Value $func -Encoding UTF8
+    }
 }
 
 Write-Host "✅ Развертывание завершено!" -ForegroundColor Green

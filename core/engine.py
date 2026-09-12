@@ -5,6 +5,7 @@
 3. Интеграция Золотой Триады, памяти SQLite WAL и On-Demand загрузчика 115 навыков.
 """
 
+import asyncio
 import json
 import logging
 from typing import Dict, Any, List, Optional

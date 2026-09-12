@@ -29,4 +29,8 @@ else
 fi
 
 chmod +x setup.sh
-./setup.sh
+if [ -e /dev/tty ]; then
+    ./setup.sh < /dev/tty
+else
+    ./setup.sh
+fi

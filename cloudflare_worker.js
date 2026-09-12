@@ -11,8 +11,8 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // 1. Проксирование Telegram Bot API
-    if (url.pathname.startsWith('/bot')) {
+    // 1. Проксирование Telegram Bot API и скачивания файлов (/bot... и /file/bot...)
+    if (url.pathname.startsWith('/bot') || url.pathname.startsWith('/file/bot')) {
       const tgUrl = 'https://api.telegram.org' + url.pathname + url.search;
       const headers = new Headers(request.headers);
       headers.set('host', 'api.telegram.org');

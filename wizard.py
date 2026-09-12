@@ -126,7 +126,7 @@ def run_wizard():
             "Да, подключить Google AI Studio (Gemini 3.7) для отказоустойчивости",
             "Пропустить (работать только на одном провайдере)"
         ]
-        b_idx = ask_choice("Настроить резервный бесплатный канал Google Gemini?", backup_opts, default_idx=0)
+        b_idx = ask_choice("Настроить резервный бесплатный канал Google Gemini?", backup_opts, default_idx=1)
         if b_idx == 0:
             env_data["GOOGLE_AI_STUDIO_API_KEY"] = ask_input("API-ключ Google AI Studio (нажмите Enter если пока нет):", default="")
             print("\n💡 Для РФ: проксируйте через Cloudflare Worker (cloudflare_worker.js на https://dash.cloudflare.com/)")

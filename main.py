@@ -237,19 +237,25 @@ def main():
         show_logs(lines)
         return
 
+    # 1. По умолчанию при запуске без параметров: запуск фонового демона 24/7
+    if not cmd and settings.telegram_bot_token:
+        from daemons.daemon_manager import start_daemon
+        start_daemon()
+        return
+
     from core.engine import SlugaEngine
     engine = SlugaEngine()
 
-    # Запуск Telegram бота в текущем терминале: sluga bot
+    # 2. Запуск Telegram бота в текущем терминале: sluga bot
     if cmd in ["bot", "daemon"]:
         asyncio.run(run_bot_mode(engine))
-    # 2. Вызов разовой команды: sluga "напиши калькулятор"
-    elif len(sys.argv) > 1 and sys.argv[1].lower() != "cli":
+    # 3. Интерактивный терминал: sluga cli или запуск без токена
+    elif cmd in ["cli", ""]:
+        asyncio.run(run_cli_mode(engine))
+    # 4. Вызов разовой команды: sluga "напиши калькулятор"
+    else:
         prompt = " ".join(sys.argv[1:])
         asyncio.run(run_single_prompt(engine, prompt))
-    # 3. Интерактивный терминал по умолчанию: sluga или sluga cli
-    else:
-        asyncio.run(run_cli_mode(engine))
 
 if __name__ == "__main__":
     main()

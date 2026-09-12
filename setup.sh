@@ -62,16 +62,20 @@ cat << EOF > "$BIN_DIR/sluga"
 EOF
 chmod +x "$BIN_DIR/sluga"
 
-echo "✅ Развертывание успешно завершено!"
+# 7. Автоматический запуск фонового демона 24/7
 echo ""
-echo "🚀 ТЕПЕРЬ АГЕНТ ЗАПУСКАЕТСЯ ИЗ ЛЮБОЙ ПАПКИ КАК CLAUDE / HERMES:"
-echo "   sluga start             — запуск Telegram-демона 24/7 (работает без терминала)"
+echo "🚀 Запуск автономного демона SLUGA 24/7..."
+"$CURRENT_DIR/.venv/bin/python" "$CURRENT_DIR/main.py" start
+
+echo ""
+echo "✅ Развертывание успешно завершено!"
+echo "💡 Демон работает в фоне. Теперь можно закрывать терминал или отключать SSH."
+echo ""
+echo "Команды управления:"
 echo "   sluga status            — статус демона (работает/остановлен, PID, логи)"
 echo "   sluga stop              — остановка фонового демона"
 echo "   sluga restart           — перезапуск фонового демона"
 echo "   sluga logs              — просмотр свежих логов"
-echo "   sluga bot               — запуск бота прямо в консоли (для отладки)"
-echo "   sluga                   — запуск интерактивной консоли CLI"
-echo "   sluga \"задача\"          — выполнение разовой задачи"
-echo "   sluga doctor            — экспресс-диагностика проекта"
-echo "   sluga setup             — запуск мастера настройки"
+echo "   sluga start             — запуск демона"
+echo "   sluga                   — запуск демона или статус"
+echo "   sluga cli               — запуск интерактивной консоли CLI"

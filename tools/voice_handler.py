@@ -56,20 +56,60 @@ async def transcribe_voice(audio_bytes: bytes, mime_type: str = "audio/ogg") -> 
     """
     Распознает речь из переданных аудио-байтов в текст.
     Приоритет:
-    1. Google Gemini Multimodal (прямой прием audio/ogg через CF прокси или напрямую)
-    2. Whisper через LiteAI / OpenAI-совместимый API
+    1. Whisper через LiteAI (быстро, стабильно, без блокировок и очередей)
+    2. Google Gemini Multimodal (резервный канал при наличии ключа)
     """
     # Проверка на пустой или поврежденный поток
     if not audio_bytes or len(audio_bytes) < 100:
         raise ValueError("Голосовой файл пустой или повреждён (размер < 100 байт).")
 
-    # 1. Попытка через Google AI Studio (Gemini 3.7 / 3.6 / Flash)
+    # 1. Основной канал: LiteAI / Whisper API
+    if settings.liteai_api_key:
+        try:
+            logger.info("Распознавание речи через LiteAI Whisper API...")
+            whisper_url = f"{settings.liteai_base_url.rstrip('/')}/audio/transcriptions"
+            headers = {"Authorization": f"Bearer {settings.liteai_api_key}"}
+            
+            # Корректное расширение в зависимости от реального mime_type
+            ext_map = {
+                "audio/ogg": "voice.ogg",
+                "audio/opus": "voice.ogg",
+                "audio/mpeg": "voice.mp3",
+                "audio/mp3": "voice.mp3",
+                "audio/mp4": "voice.m4a",
+                "audio/x-m4a": "voice.m4a",
+                "audio/wav": "voice.wav",
+                "audio/x-wav": "voice.wav",
+                "audio/webm": "voice.webm",
+            }
+            file_name = ext_map.get(mime_type.lower(), "voice.ogg")
+
+            files = {
+                "file": (file_name, audio_bytes, mime_type)
+            }
+            data = {
+                "model": "whisper-1",
+                "language": "ru"
+            }
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(whisper_url, headers=headers, files=files, data=data)
+                if resp.status_code == 200:
+                    recognized = resp.json().get("text", "").strip()
+                    if recognized:
+                        logger.info(f"Речь успешно расшифрована (Whisper): '{recognized[:50]}...'")
+                        return recognized
+                else:
+                    logger.warning(f"LiteAI Whisper вернул HTTP {resp.status_code}: {resp.text[:150]}")
+        except Exception as e:
+            logger.warning(f"Сбой расшифровки через LiteAI Whisper: {e}")
+
+    # 2. Резервный канал: Google AI Studio (Gemini 3.7 / 3.6 / Flash)
     if settings.google_ai_studio_api_key:
         try:
-            logger.info("Распознавание речи через Google Gemini Multimodal Audio...")
+            logger.info("Резервное распознавание речи через Google Gemini Multimodal Audio...")
             b64_audio = base64.b64encode(audio_bytes).decode("utf-8")
             
-            # Определяем базовый URL для нативного вызова generateContent
             base_url = settings.cf_gemini_proxy_url.rstrip('/')
             if base_url.endswith("/openai"):
                 base_url = base_url[:-7]
@@ -117,46 +157,7 @@ async def transcribe_voice(audio_bytes: bytes, mime_type: str = "audio/ogg") -> 
         except Exception as e:
             logger.warning(f"Сбой расшифровки через Gemini: {e}")
 
-    # 2. Попытка через LiteAI / Whisper API
-    if settings.liteai_api_key:
-        try:
-            logger.info("Распознавание речи через Whisper API...")
-            whisper_url = f"{settings.liteai_base_url.rstrip('/')}/audio/transcriptions"
-            headers = {"Authorization": f"Bearer {settings.liteai_api_key}"}
-            
-            # Корректное расширение в зависимости от реального mime_type
-            ext_map = {
-                "audio/ogg": "voice.ogg",
-                "audio/opus": "voice.ogg",
-                "audio/mpeg": "voice.mp3",
-                "audio/mp3": "voice.mp3",
-                "audio/mp4": "voice.m4a",
-                "audio/x-m4a": "voice.m4a",
-                "audio/wav": "voice.wav",
-                "audio/x-wav": "voice.wav",
-                "audio/webm": "voice.webm",
-            }
-            file_name = ext_map.get(mime_type.lower(), "voice.ogg")
-
-            files = {
-                "file": (file_name, audio_bytes, mime_type)
-            }
-            data = {
-                "model": "whisper-1",
-                "language": "ru"
-            }
-
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(whisper_url, headers=headers, files=files, data=data)
-                if resp.status_code == 200:
-                    recognized = resp.json().get("text", "").strip()
-                    if recognized:
-                        logger.info(f"Речь успешно расшифрована (Whisper): '{recognized[:50]}...'")
-                        return recognized
-        except Exception as e:
-            logger.warning(f"Сбой расшифровки через Whisper: {e}")
-
-    raise RuntimeError("Не удалось распознать голосовое сообщение. Убедитесь, что настроен GOOGLE_AI_STUDIO_API_KEY или LITEAI_API_KEY.")
+    raise RuntimeError("Не удалось распознать голосовое сообщение. Убедитесь, что настроен LITEAI_API_KEY (https://liteai.tech/) или проверьте баланс токенов (/balance).")
 
 
 async def synthesize_voice(text: str, voice: str = DEFAULT_VOICE) -> bytes:

@@ -81,7 +81,7 @@ def create_bot() -> Bot:
             base=f"{base_proxy}/bot{{token}}/{{method}}",
             file=f"{base_proxy}/file/bot{{token}}/{{path}}"
         )
-        session = AiohttpSession(api=server)
+        session = AiohttpSession(api=server, timeout=120.0)
 
     return Bot(token=settings.telegram_bot_token, session=session)
 
@@ -117,7 +117,7 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
         )
         await msg.answer(welcome, parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
 
-    @dp.message(Command("hide") | Command("clean"))
+    @dp.message(Command("hide", "clean"))
     async def cmd_hide(msg: types.Message):
         if not is_allowed(msg.from_user.id):
             return
@@ -173,7 +173,7 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
         )
         await msg.answer(res, parse_mode="Markdown")
 
-    @dp.message(Command("balance") | Command("stats"))
+    @dp.message(Command("balance", "stats"))
     async def cmd_stats(msg: types.Message):
         if not is_allowed(msg.from_user.id):
             return

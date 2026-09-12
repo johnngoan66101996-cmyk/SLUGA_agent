@@ -62,6 +62,17 @@ cat << EOF > "$BIN_DIR/sluga"
 EOF
 chmod +x "$BIN_DIR/sluga"
 
+# Автодобавление ~/.local/bin в PATH пользователя
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    if [ -f "$HOME/.bashrc" ] && ! grep -q 'HOME/.local/bin' "$HOME/.bashrc"; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    fi
+    if [ -f "$HOME/.profile" ] && ! grep -q 'HOME/.local/bin' "$HOME/.profile"; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.profile"
+    fi
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 # 7. Автоматический запуск фонового демона 24/7
 echo ""
 echo "🚀 Запуск автономного демона SLUGA 24/7..."

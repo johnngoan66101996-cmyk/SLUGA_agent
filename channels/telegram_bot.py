@@ -7,6 +7,7 @@ Telegram-канал связи агента SLUGA.
 import logging
 import io
 from aiogram import Bot, Dispatcher, types, F
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.filters import Command
@@ -19,6 +20,17 @@ logger = logging.getLogger("SLUGA_TELEGRAM")
 
 # Хранилище настроек голосового ответа по чатам (по умолчанию включен)
 chat_voice_settings = {}
+
+def get_main_keyboard() -> ReplyKeyboardMarkup:
+    """Удобное меню быстрых кнопок агента SLUGA"""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🔬 МРТ проекта"), KeyboardButton(text="🛠️ 116 Навыков")],
+            [KeyboardButton(text="🔐 Статус ключей"), KeyboardButton(text="🎙️ Голос (Вкл/Выкл)")],
+            [KeyboardButton(text="🧹 Очистить память"), KeyboardButton(text="🔽 Скрыть кнопки")]
+        ],
+        resize_keyboard=True
+    )
 
 def create_bot() -> Bot:
     session = None
@@ -54,14 +66,21 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
             "Доступные команды:\n"
             "  /doctor — МРТ текущего проекта\n"
             "  /skills — Каталог 116 навыков\n"
-            "  /key — Смена ключа на лету\n"
-            "  /model — Смена модели на лету\n"
-            "  /keys — Статус активных ключей\n"
-            "  /reset — Очистить текущий контекст диалога\n"
-            "  /status — Статус системы и памяти\n\n"
+            "  /keys   — Статус активных ключей\n"
+            "  /model  — Смена модели на лету\n"
+            "  /key    — Смена API-ключа на лету\n"
+            "  /voice  — Управление голосовыми ответами\n"
+            "  /reset  — Очистить текущий контекст диалога\n"
+            "  /hide   — Скрыть кнопки под чатом\n\n"
             "Отправьте мне любую задачу — от анализа кода до автономного рефакторинга."
         )
-        await msg.answer(welcome, parse_mode="Markdown")
+        await msg.answer(welcome, parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
+
+    @dp.message(Command("hide") | Command("clean"))
+    async def cmd_hide(msg: types.Message):
+        if not is_allowed(msg.from_user.id):
+            return
+        await msg.answer("🔽 Нижняя панель кнопок скрыта. Напишите /start, чтобы вернуть её в любой момент.", reply_markup=ReplyKeyboardRemove())
 
     @dp.message(Command("doctor"))
     async def cmd_doctor(msg: types.Message):
@@ -239,6 +258,63 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
             logger.exception("Ошибка обработки голосового сообщения")
             await status_msg.edit_text(f"❌ Не удалось обработать голосовое сообщение: {e}")
 
+    # Обработчики быстрых кнопок клавиатуры SLUGA
+    @dp.message(F.text == "🔬 МРТ проекта")
+    async def btn_doctor(msg: types.Message):
+        await cmd_doctor(msg)
+
+    @dp.message(F.text == "🛠️ 116 Навыков")
+    async def btn_skills(msg: types.Message):
+        await cmd_skills(msg)
+
+    @dp.message(F.text == "🔐 Статус ключей")
+    async def btn_keys(msg: types.Message):
+        await cmd_keys(msg)
+
+    @dp.message(F.text == "🎙️ Голос (Вкл/Выкл)")
+    async def btn_voice(msg: types.Message):
+        chat_id = msg.chat.id
+        current = chat_voice_settings.get(chat_id, True)
+        new_state = not current
+        chat_voice_settings[chat_id] = new_state
+        status_text = "включены 🎙️" if new_state else "отключены 🔇"
+        await msg.answer(f"Голосовые ответы теперь **{status_text}**.", parse_mode="Markdown")
+
+    @dp.message(F.text == "🧹 Очистить память")
+    async def btn_reset(msg: types.Message):
+        await cmd_reset(msg)
+
+    @dp.message(F.text == "🔽 Скрыть кнопки")
+    async def btn_hide(msg: types.Message):
+        await cmd_hide(msg)
+
+    # Обработка устаревших кнопок от предыдущего бота (перехват и исправление клавиатуры)
+    @dp.message(F.text == "👑 Google Gemini 3.7")
+    async def legacy_gemini(msg: types.Message):
+        status = settings.update_model_runtime("gemini-3.7-flash")
+        await msg.answer(f"✅ {status}\n\nСтарые кнопки удалены, активна актуальная панель SLUGA:", reply_markup=get_main_keyboard())
+
+    @dp.message(F.text == "⚡ LiteAI Claude Sonnet")
+    async def legacy_claude(msg: types.Message):
+        status = settings.update_model_runtime("claude-sonnet-4-6")
+        await msg.answer(f"✅ {status}\n\nСтарые кнопки удалены, активна актуальная панель SLUGA:", reply_markup=get_main_keyboard())
+
+    @dp.message(F.text == "⚙️ Статус")
+    async def legacy_status(msg: types.Message):
+        await cmd_keys(msg)
+        await msg.answer("✅ Клавиатура обновлена на актуальную:", reply_markup=get_main_keyboard())
+
+    @dp.message(F.text == "🔄 Сменить провайдера")
+    async def legacy_switch_provider(msg: types.Message):
+        await cmd_model(msg)
+
+    @dp.message(F.text.in_(["🔼 Показать панель управления", "🔽 Скрыть панель кнопок"]))
+    async def legacy_menu_toggle(msg: types.Message):
+        if "Скрыть" in msg.text:
+            await cmd_hide(msg)
+        else:
+            await msg.answer("✅ Панель управления SLUGA:", reply_markup=get_main_keyboard())
+
     # Обработчик текстовых сообщений
     @dp.message(F.text)
     async def handle_user_prompt(msg: types.Message):
@@ -248,3 +324,4 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
         session_id = f"tg_{msg.chat.id}"
         status_msg = await msg.answer("🧠 SLUGA принял задачу в обработку...")
         await _process_and_reply(msg, session_id, msg.text, status_msg, is_voice_input=False)
+

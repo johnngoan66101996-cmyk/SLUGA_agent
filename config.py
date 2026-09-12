@@ -29,6 +29,7 @@ class ConfigMethodsMixin:
         return ids
 
     def update_key_runtime(self, provider: str, new_key: str) -> str:
+        new_key = new_key.strip().strip("<>").strip()
         provider_lower = provider.lower()
         if "lite" in provider_lower or "claude" in provider_lower:
             self.liteai_api_key = new_key
@@ -44,13 +45,14 @@ class ConfigMethodsMixin:
             return f"Ключ для {provider} обновлен."
 
     def update_model_runtime(self, new_model: str) -> str:
-        if "gemini" in new_model.lower():
-            self.google_gemini_model = new_model
-            self._persist_env_var("GOOGLE_GEMINI_MODEL", new_model)
+        clean_model = new_model.strip().strip("<>").strip()
+        if "gemini" in clean_model.lower():
+            self.google_gemini_model = clean_model
+            self._persist_env_var("GOOGLE_GEMINI_MODEL", clean_model)
         else:
-            self.liteai_model = new_model
-            self._persist_env_var("LITEAI_MODEL", new_model)
-        return f"Модель переключена на: {new_model}"
+            self.liteai_model = clean_model
+            self._persist_env_var("LITEAI_MODEL", clean_model)
+        return f"Модель переключена на: {clean_model}"
 
     def _persist_env_var(self, key_name: str, key_value: str):
         env_path = BASE_DIR / ".env"

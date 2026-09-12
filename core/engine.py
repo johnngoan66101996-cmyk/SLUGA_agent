@@ -162,8 +162,10 @@ class SlugaEngine:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
+        # Автоматическая очистка названия модели от скобок < > и пробелов
+        clean_model = model.strip().strip("<>").strip()
         payload = {
-            "model": model,
+            "model": clean_model,
             "messages": messages,
             "tools": TOOL_DEFINITIONS,
             "tool_choice": "auto",

@@ -223,10 +223,14 @@ class SlugaEngine:
                     )
                 except Exception as e:
                     logger.warning(f"Google AI Studio ({target_model}) сбой: {e}")
-                    if "404" not in str(e) and "not found" not in str(e).lower():
+                    # Если ошибка авторизации (неверный ключ), прерываем
+                    if "401" in str(e) or "403" in str(e) or "API_KEY_INVALID" in str(e):
                         break
+                    # При 503 (High demand), 429 (Rate limit), 500, 404 — пробуем следующую доступную модель (3.6 / 3.8)
+                    await asyncio.sleep(1.5)
+                    continue
 
-            logger.error("Все модели Google AI Studio (3.6/3.7/3.8) недоступны.")
+            logger.error("Все модели Google AI Studio (3.6/3.7/3.8) временно недоступны.")
 
         raise ValueError("Не настроены API ключи или все провайдеры недоступны! Заполните LITEAI_API_KEY или GOOGLE_AI_STUDIO_API_KEY в .env (команда /key).")
 

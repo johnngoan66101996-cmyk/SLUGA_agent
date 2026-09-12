@@ -121,30 +121,30 @@ TELEGRAM_PROXY_URL=https://your-worker-subdomain.workers.dev/
 TELEGRAM_ALLOWED_USERS=твой_telegram_id
 ```
 
-### 3. Запуск
+### 3. Запуск агента (в точности как Claude Code или Hermes)
 
-#### Вариант A: Docker Compose (Рекомендуется для VPS)
+После установки агент регистрирует глобальную команду `sluga` в вашей операционной системе (Windows и Linux). Теперь вам не нужно переходить в папку агента или вручную активировать виртуальное окружение — просто введите `sluga` в **любом терминале и в любой директории**:
+
+```bash
+# 1. Запуск интерактивной консоли CLI (прямо в текущей папке проекта):
+sluga
+
+# 2. Выполнение разовой задачи одной строкой (как claude "задача"):
+sluga "в текущей папке напиши процентный калькулятор"
+
+# 3. Запуск Telegram-бота в режиме демона:
+sluga bot
+
+# 4. Провести экспресс-диагностику текущего проекта (МРТ):
+sluga doctor
+
+# 5. Запустить интерактивный мастер настройки окружения:
+sluga setup
+```
+
+#### Запуск через Docker Compose (для VPS):
 ```bash
 docker compose up -d
-```
-
-#### Вариант B: Нативный запуск (Linux VPS)
-```bash
-chmod +x setup.sh
-./setup.sh
-source .venv/bin/activate
-python main.py bot
-```
-
-#### Вариант C: Windows
-```powershell
-.\setup.ps1
-.venv\Scripts\python.exe main.py bot
-```
-
-#### Вариант D: Прямой CLI-режим (терминальный чат)
-```bash
-python main.py cli
 ```
 
 ---

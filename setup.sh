@@ -35,7 +35,23 @@ fi
 # 5. Создание директории данных
 mkdir -p data
 
+# 6. Регистрация глобальной команды 'sluga' (как claude или hermes)
+echo "🔗 Регистрация глобальной команды 'sluga' в системе..."
+BIN_DIR="$HOME/.local/bin"
+mkdir -p "$BIN_DIR"
+CURRENT_DIR="$(pwd)"
+
+cat << EOF > "$BIN_DIR/sluga"
+#!/usr/bin/env bash
+"$CURRENT_DIR/.venv/bin/python" "$CURRENT_DIR/main.py" "\$@"
+EOF
+chmod +x "$BIN_DIR/sluga"
+
 echo "✅ Развертывание успешно завершено!"
-echo "Для запуска в фоновом режиме Telegram-бота выполните:"
-echo "   source .venv/bin/activate && python main.py bot"
-echo "Или через Docker: docker compose up -d"
+echo ""
+echo "🚀 ТЕПЕРЬ АГЕНТ ЗАПУСКАЕТСЯ ИЗ ЛЮБОЙ ПАПКИ КАК CLAUDE / HERMES:"
+echo "   sluga                   — запуск интерактивной консоли CLI"
+echo "   sluga \"задача\"          — выполнение разовой задачи"
+echo "   sluga bot               — запуск Telegram-демона"
+echo "   sluga doctor            — экспресс-диагностика проекта"
+echo "   sluga setup             — запуск мастера настройки"

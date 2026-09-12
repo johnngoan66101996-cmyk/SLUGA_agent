@@ -37,6 +37,34 @@ if (-not (Test-Path "data")) {
     New-Item -ItemType Directory -Path "data" | Out-Null
 }
 
+# 6. Регистрация глобальной команды 'sluga' в системе (как claude или hermes)
+Write-Host "🔗 Регистрация глобальной команды 'sluga' в системе..." -ForegroundColor Yellow
+$cmdContent = @"
+@echo off
+setlocal
+"$PSScriptRoot\.venv\Scripts\python.exe" "$PSScriptRoot\main.py" %*
+endlocal
+"@
+Set-Content -Path "$PSScriptRoot\sluga.cmd" -Value $cmdContent -Encoding ASCII
+
+# Добавляем папку агента в User PATH, если еще не добавлено
+$userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+if ($userPath -notlike "*$PSScriptRoot*") {
+    [Environment]::SetEnvironmentVariable("PATH", "$userPath;$PSScriptRoot", "User")
+    $env:PATH += ";$PSScriptRoot"
+}
+
+# Копируем в WindowsApps для немедленной доступности в любых окнах терминала
+$winApps = "$env:LOCALAPPDATA\Microsoft\WindowsApps"
+if (Test-Path $winApps) {
+    Set-Content -Path "$winApps\sluga.cmd" -Value $cmdContent -Encoding ASCII
+}
+
 Write-Host "✅ Развертывание завершено!" -ForegroundColor Green
-Write-Host "Для запуска в режиме консоли:   .venv\Scripts\python.exe main.py cli" -ForegroundColor Cyan
-Write-Host "Для запуска Telegram-демона:    .venv\Scripts\python.exe main.py bot" -ForegroundColor Cyan
+Write-Host "`n🚀 ТЕПЕРЬ АГЕНТ ЗАПУСКАЕТСЯ ИЗ ЛЮБОЙ ПАПКИ КАК CLAUDE / HERMES:" -ForegroundColor Yellow
+Write-Host "   sluga                   — запуск интерактивной консоли CLI" -ForegroundColor Green
+Write-Host "   sluga `"задача`"          — выполнение разовой задачи" -ForegroundColor Green
+Write-Host "   sluga bot               — запуск Telegram-демона" -ForegroundColor Green
+Write-Host "   sluga doctor            — экспресс-диагностика проекта" -ForegroundColor Green
+Write-Host "   sluga setup             — запуск мастера настройки" -ForegroundColor Green
+

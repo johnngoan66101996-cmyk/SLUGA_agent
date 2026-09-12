@@ -181,23 +181,45 @@ async def run_bot_mode(engine: SlugaEngine):
         daemon.stop()
         await bot.session.close()
 
+async def run_single_prompt(engine: SlugaEngine, prompt: str):
+    print(f"\n⚙️ Обработка задачи: {prompt}\n")
+    async def cli_status(text):
+        print(f"  {text}")
+    try:
+        result = await engine.process_user_request(
+            session_id="single_cli_run",
+            user_prompt=prompt,
+            status_callback=cli_status
+        )
+        print(f"\n🤖 SLUGA:\n{result}\n")
+    except Exception as e:
+        print(f"\n❌ Ошибка: {e}\n")
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1].lower() in ["setup", "wizard"]:
         import wizard
         wizard.run_wizard()
         return
 
-    engine = SlugaEngine()
-    mode = "bot"
-    if len(sys.argv) > 1 and sys.argv[1].lower() == "cli":
-        mode = "cli"
-    elif not settings.telegram_bot_token:
-        mode = "cli"
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "doctor":
+        from tools.project_doctor import diagnose_project
+        import json
+        print("\n🩺 МРТ Проекта:")
+        print(json.dumps(diagnose_project("."), ensure_ascii=False, indent=2))
+        return
 
-    if mode == "cli":
-        asyncio.run(run_cli_mode(engine))
-    else:
+    engine = SlugaEngine()
+
+    # 1. Запуск Telegram бота: sluga bot
+    if len(sys.argv) > 1 and sys.argv[1].lower() in ["bot", "daemon"]:
         asyncio.run(run_bot_mode(engine))
+    # 2. Вызов разовой команды: sluga "напиши калькулятор"
+    elif len(sys.argv) > 1 and sys.argv[1].lower() != "cli":
+        prompt = " ".join(sys.argv[1:])
+        asyncio.run(run_single_prompt(engine, prompt))
+    # 3. Интерактивный терминал по умолчанию: sluga или sluga cli
+    else:
+        asyncio.run(run_cli_mode(engine))
 
 if __name__ == "__main__":
     main()

@@ -86,10 +86,10 @@ try:
         liteai_base_url: str = Field(default="https://api.liteai.tech/v1", alias="LITEAI_BASE_URL")
         liteai_model: str = Field(default="claude-sonnet-4-6", alias="LITEAI_MODEL")
 
-        # Google AI Studio via Cloudflare Worker
+        # Google AI Studio via Cloudflare Worker or Direct API
         google_ai_studio_api_key: Optional[str] = Field(default=None, alias="GOOGLE_AI_STUDIO_API_KEY")
         cf_gemini_proxy_url: str = Field(
-            default="https://hermes-proxy.johnngoan66101996.workers.dev/v1beta/openai/",
+            default="https://generativelanguage.googleapis.com/v1beta/openai/",
             alias="CF_GEMINI_PROXY_URL"
         )
         google_gemini_model: str = Field(default="gemini-3.7-flash", alias="GOOGLE_GEMINI_MODEL")
@@ -97,7 +97,7 @@ try:
         # Telegram Bot
         telegram_bot_token: Optional[str] = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
         telegram_proxy_url: Optional[str] = Field(
-            default="https://hermes-proxy.johnngoan66101996.workers.dev/",
+            default=None,
             alias="TELEGRAM_PROXY_URL"
         )
         telegram_allowed_users: str = Field(default="", alias="TELEGRAM_ALLOWED_USERS")
@@ -115,10 +115,10 @@ except ImportError:
             self.liteai_base_url = "https://api.liteai.tech/v1"
             self.liteai_model = "claude-sonnet-4-6"
             self.google_ai_studio_api_key = None
-            self.cf_gemini_proxy_url = "https://hermes-proxy.johnngoan66101996.workers.dev/v1beta/openai/"
+            self.cf_gemini_proxy_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
             self.google_gemini_model = "gemini-3.7-flash"
             self.telegram_bot_token = None
-            self.telegram_proxy_url = "https://hermes-proxy.johnngoan66101996.workers.dev/"
+            self.telegram_proxy_url = None
             self.telegram_allowed_users = ""
             self.sqlite_db_path = "./data/sluga_memory.db"
             self.log_level = "INFO"

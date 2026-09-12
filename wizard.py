@@ -105,9 +105,12 @@ def run_wizard():
         # Google AI Studio
         g_key = ask_input("Введите API-ключ Google AI Studio (AIzaSy...):", hide_input=False)
         env_data["GOOGLE_AI_STUDIO_API_KEY"] = g_key
+        print("\n💡 Для работы Google AI Studio в РФ используйте бесплатный Cloudflare Worker (cloudflare_worker.js).")
+        print("   Сервис Cloudflare: https://dash.cloudflare.com/ (раздел Workers & Pages)")
+        print("   Если ваш сервер/VPN за рубежом — нажмите Enter для прямого подключения к Google API.\n")
         env_data["CF_GEMINI_PROXY_URL"] = ask_input(
-            "URL вашего Cloudflare Worker эндпоинта:",
-            default="https://hermes-proxy.johnngoan66101996.workers.dev/v1beta/openai/"
+            "URL Cloudflare Worker (например: https://your-proxy.workers.dev/v1beta/openai/) или Enter:",
+            default="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
         env_data["GOOGLE_GEMINI_MODEL"] = ask_input("Модель Gemini:", default="gemini-3.7-flash")
 
@@ -117,16 +120,21 @@ def run_wizard():
         env_data["LITEAI_BASE_URL"] = ask_input("Base URL:", default="https://openrouter.ai/api/v1")
         env_data["LITEAI_MODEL"] = ask_input("Модель:", default="anthropic/claude-3.5-sonnet")
 
-    # --- 2. Резервный провайдер (Резервный канал через Cloudflare Worker) ---
+    # --- 2. Резервный провайдер (Резервный канал Google Gemini) ---
     if "GOOGLE_AI_STUDIO_API_KEY" not in env_data:
         backup_opts = [
-            "Да, подключить Google AI Studio через Cloudflare Worker для отказоустойчивости",
+            "Да, подключить Google AI Studio (Gemini 3.7) для отказоустойчивости",
             "Пропустить (работать только на одном провайдере)"
         ]
-        b_idx = ask_choice("Настроить резервный бесплатный канал Google Gemini (через CF Worker)?", backup_opts, default_idx=0)
+        b_idx = ask_choice("Настроить резервный бесплатный канал Google Gemini?", backup_opts, default_idx=0)
         if b_idx == 0:
             env_data["GOOGLE_AI_STUDIO_API_KEY"] = ask_input("API-ключ Google AI Studio (нажмите Enter если пока нет):", default="")
-            env_data["CF_GEMINI_PROXY_URL"] = "https://hermes-proxy.johnngoan66101996.workers.dev/v1beta/openai/"
+            print("\n💡 Для РФ: проксируйте через Cloudflare Worker (cloudflare_worker.js на https://dash.cloudflare.com/)")
+            cf_in = ask_input(
+                "URL Cloudflare Worker (например: https://your-proxy.workers.dev/v1beta/openai/) или Enter для прямого подключения:",
+                default="https://generativelanguage.googleapis.com/v1beta/openai/"
+            )
+            env_data["CF_GEMINI_PROXY_URL"] = cf_in
             env_data["GOOGLE_GEMINI_MODEL"] = "gemini-3.7-flash"
 
     # --- 3. Настройка Telegram ---
@@ -138,7 +146,13 @@ def run_wizard():
     if c_idx == 0:
         tg_token = ask_input("Введите токен Telegram-бота (от @BotFather):", default="")
         env_data["TELEGRAM_BOT_TOKEN"] = tg_token
-        env_data["TELEGRAM_PROXY_URL"] = "https://hermes-proxy.johnngoan66101996.workers.dev/"
+        print("\n💡 Для обхода блокировок Telegram API в РФ укажите URL вашего Cloudflare Worker.")
+        print("   Если бот работает за пределами РФ — оставьте поле пустым (нажмите Enter).")
+        tg_proxy = ask_input(
+            "URL Cloudflare Worker для Telegram (например: https://your-proxy.workers.dev/ или оставьте пустым):",
+            default=""
+        )
+        env_data["TELEGRAM_PROXY_URL"] = tg_proxy
         tg_users = ask_input("Ваш Telegram User ID для белого списка (Whitelist, через запятую):", default="")
         env_data["TELEGRAM_ALLOWED_USERS"] = tg_users
     else:

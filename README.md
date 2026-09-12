@@ -104,16 +104,20 @@ cp .env.example .env
 # Основной провайдер: LiteAI (https://liteai.tech/)
 LITEAI_API_KEY=твой_ключ_liteai
 LITEAI_BASE_URL=https://api.liteai.tech/v1
-LITEAI_MODEL=claude-3-5-sonnet-20241022
+LITEAI_MODEL=claude-sonnet-4-6
 
-# Резервный провайдер: Google AI Studio через твой Cloudflare Worker
+# Резервный провайдер: Google AI Studio (https://aistudio.google.com/)
 GOOGLE_AI_STUDIO_API_KEY=твой_ключ_google_ai_studio
-CF_GEMINI_PROXY_URL=https://hermes-proxy.johnngoan66101996.workers.dev/v1beta/openai/
+# Для РФ укажите URL вашего Cloudflare Worker (с суффиксом /v1beta/openai/):
+# Если сервер за рубежом — оставьте: https://generativelanguage.googleapis.com/v1beta/openai/
+CF_GEMINI_PROXY_URL=https://your-worker-subdomain.workers.dev/v1beta/openai/
 GOOGLE_GEMINI_MODEL=gemini-3.7-flash
 
 # Telegram Бот (если используется):
 TELEGRAM_BOT_TOKEN=твой_токен_бота
-TELEGRAM_PROXY_URL=https://hermes-proxy.johnngoan66101996.workers.dev/
+# Для РФ укажите URL вашего Cloudflare Worker (например: https://your-worker-subdomain.workers.dev/)
+# Если сервер за рубежом — оставьте пустым для прямого подключения:
+TELEGRAM_PROXY_URL=https://your-worker-subdomain.workers.dev/
 TELEGRAM_ALLOWED_USERS=твой_telegram_id
 ```
 
@@ -145,12 +149,38 @@ python main.py cli
 
 ---
 
-## 🌐 Настройка Cloudflare Worker Proxy
+## 🌐 Пошаговая инструкция: Создание своего Cloudflare Worker Proxy
 
-Для обхода блокировок Google AI Studio и Telegram API в РФ используется Cloudflare Worker:
-1. Откройте [dash.cloudflare.com](https://dash.cloudflare.com/) -> **Workers & Pages** -> **Create Application**.
-2. Вставьте код из файла [`cloudflare_worker.js`](file:///c:/Users/sugat/OneDrive/Desktop/%D1%81%D0%BA%D0%B8%D0%BB%D1%8B/cloudflare_worker.js).
-3. Нажмите **Deploy**. Полученный URL укажите в `CF_GEMINI_PROXY_URL` и `TELEGRAM_PROXY_URL`.
+Для обхода блокировок Google AI Studio и Telegram API на территории РФ используется собственный бесплатный прокси на базе Cloudflare Workers (тариф Free предоставляет 100,000 запросов в день бесплатно, без привязки банковской карты).
+
+> **💡 Примечание:** Если ваш сервер или ПК находится за пределами РФ (или используется VPN), настраивать Cloudflare Worker **не требуется** — агент подключается к Google AI Studio и Telegram напрямую.
+
+### Порядок действий (занимает 2 минуты):
+
+1. **Регистрация в Cloudflare:**
+   - Перейдите на [dash.cloudflare.com](https://dash.cloudflare.com/) и войдите или зарегистрируйтесь.
+2. **Создание Worker:**
+   - В левом меню выберите **Workers & Pages** (или **Compute (Workers)**).
+   - Нажмите кнопку **Create Application** -> выберите вкладку **Workers** -> **Create Worker**.
+   - Задайте имя воркера (например, `sluga-proxy`) и нажмите **Deploy**.
+3. **Загрузка кода прокси:**
+   - На открывшейся странице воркера нажмите кнопку **Edit code**.
+   - Удалите стандартный шаблон кода и вставьте содержимое файла [`cloudflare_worker.js`](./cloudflare_worker.js) из этого репозитория.
+   - Нажмите **Deploy** (или **Save and Deploy**).
+4. **Получение URL вашего воркера:**
+   - Скопируйте готовый адрес вашего воркера, он имеет вид:  
+     `https://sluga-proxy.<твой-поддомен>.workers.dev`
+5. **Указание в настройках агента (`.env` или через Мастер установки `wizard.py`):**
+   - **Для Google Gemini API:** добавьте суффикс `/v1beta/openai/`:  
+     `CF_GEMINI_PROXY_URL=https://sluga-proxy.<твой-поддомен>.workers.dev/v1beta/openai/`
+   - **Для Telegram Bot API:** укажите базовый URL со слэшем на конце:  
+     `TELEGRAM_PROXY_URL=https://sluga-proxy.<твой-поддомен>.workers.dev/`
+
+### Ссылки на сервисы для ключей:
+- **LiteAI (Claude Sonnet 4.6 / GPT-5.5 без VPN):** [https://liteai.tech/](https://liteai.tech/)
+- **Google AI Studio (Бесплатные ключи Gemini 3.7):** [https://aistudio.google.com/](https://aistudio.google.com/)
+- **Cloudflare Dashboard (Бесплатный воркер-прокси):** [https://dash.cloudflare.com/](https://dash.cloudflare.com/)
+- **Telegram BotFather (Создание бота и токен):** [https://t.me/BotFather](https://t.me/BotFather)
 
 ---
 

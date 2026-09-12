@@ -147,6 +147,8 @@ async def run_cli_mode(engine: SlugaEngine):
                         print(f"\n🤖 SLUGA:\n{result}")
                     else:
                         print("Запрос отменен.")
+                elif "Не настроены API ключи" in err_str:
+                    print(f"\n❌ {err_str}")
                 else:
                     raise req_err
 
@@ -154,8 +156,9 @@ async def run_cli_mode(engine: SlugaEngine):
             print("\nСеанс прерван.")
             break
         except Exception as e:
-            logger.exception("Ошибка в CLI режиме")
-            print(f"\n❌ Ошибка: {e}")
+            if "Не настроены API ключи" not in str(e):
+                logger.exception("Ошибка в CLI режиме")
+            print(f"\n❌ {e}")
 
 async def run_bot_mode(engine: SlugaEngine):
     if not settings.telegram_bot_token:

@@ -6,6 +6,7 @@ Telegram-канал связи агента SLUGA.
 
 import logging
 import io
+import httpx
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -21,13 +22,27 @@ logger = logging.getLogger("SLUGA_TELEGRAM")
 # Хранилище настроек голосового ответа по чатам (по умолчанию включен)
 chat_voice_settings = {}
 
+async def check_liteai_stats(api_key: str) -> dict:
+    """Запрос статистики ключа и расхода токенов с сервиса LiteAI (liteai.tech/api/stats)"""
+    clean_key = api_key.strip().strip("<>").strip()
+    url = f"https://liteai.tech/api/stats?key={clean_key}"
+    headers = {"User-Agent": "SLUGA_Agent/2.0"}
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(url, headers=headers)
+        if resp.status_code == 401:
+            return {"error": "Ключ недействителен или не активен (401 Unauthorized)"}
+        if not resp.is_success:
+            return {"error": f"Ошибка сервиса LiteAI: HTTP {resp.status_code}"}
+        return resp.json()
+
 def get_main_keyboard() -> ReplyKeyboardMarkup:
     """Удобное меню быстрых кнопок агента SLUGA"""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔬 МРТ проекта"), KeyboardButton(text="🛠️ 116 Навыков")],
-            [KeyboardButton(text="🔐 Статус ключей"), KeyboardButton(text="🎙️ Голос (Вкл/Выкл)")],
-            [KeyboardButton(text="🧹 Очистить память"), KeyboardButton(text="🔽 Скрыть кнопки")]
+            [KeyboardButton(text="🔬 МРТ проекта"), KeyboardButton(text="📊 Баланс токенов")],
+            [KeyboardButton(text="🔐 Статус ключей"), KeyboardButton(text="🛠️ 116 Навыков")],
+            [KeyboardButton(text="🧹 Очистить память"), KeyboardButton(text="🎙️ Голос (Вкл/Выкл)")],
+            [KeyboardButton(text="🔽 Скрыть кнопки")]
         ],
         resize_keyboard=True
     )
@@ -64,11 +79,12 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
             "  • Primary: **LiteAI** (Claude / GPT-5)\n"
             "  • Secondary: **Google AI Studio** (Gemini 3.7 / 3.6 / 3.8 Flash)\n\n"
             "Доступные команды:\n"
+            "  /balance — Проверка токенов и баланса LiteAI\n"
+            "  /keys   — Статус активных ключей\n"
+            "  /key    — Смена API-ключа на лету\n"
+            "  /model  — Смена модели на лету\n"
             "  /doctor — МРТ текущего проекта\n"
             "  /skills — Каталог 116 навыков\n"
-            "  /keys   — Статус активных ключей\n"
-            "  /model  — Смена модели на лету\n"
-            "  /key    — Смена API-ключа на лету\n"
             "  /voice  — Управление голосовыми ответами\n"
             "  /reset  — Очистить текущий контекст диалога\n"
             "  /hide   — Скрыть кнопки под чатом\n\n"
@@ -127,9 +143,75 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
             "🔑 **Текущие ключи и модели (Рантайм):**\n"
             f"• LiteAI: `{mask(settings.liteai_api_key)}` | Модель: `{settings.liteai_model}`\n"
             f"• Google AI Studio: `{mask(settings.google_ai_studio_api_key)}` | Модель: `{settings.google_gemini_model}`\n\n"
-            "Смена на лету: `/key <новый_ключ>` или `/model <имя_модели>`"
+            "Смена на лету: `/key <новый_ключ>` или `/model <имя_модели>`\n"
+            "📊 Проверить токены и баланс LiteAI: `/balance` или `/stats`"
         )
         await msg.answer(res, parse_mode="Markdown")
+
+    @dp.message(Command("balance") | Command("stats"))
+    async def cmd_stats(msg: types.Message):
+        if not is_allowed(msg.from_user.id):
+            return
+        parts = msg.text.split(maxsplit=1)
+        key_to_check = parts[1].strip().strip("<>").strip() if len(parts) > 1 else (settings.liteai_api_key or "").strip()
+        if not key_to_check:
+            await msg.answer(
+                "❌ Ключ LiteAI не найден в конфигурации.\n\n"
+                "Использование:\n"
+                "• `/balance sk-bf-...` — проверить баланс по указанному ключу\n"
+                "• `/key liteai sk-bf-...` — привязать ключ к боту",
+                parse_mode="Markdown"
+            )
+            return
+
+        status_msg = await msg.answer("⏳ Запрашиваю статистику и токены с LiteAI (liteai.tech/stats)...")
+        try:
+            data = await check_liteai_stats(key_to_check)
+            if "error" in data:
+                await status_msg.edit_text(f"❌ {data['error']}")
+                return
+
+            total_tokens = data.get("total_tokens", 0)
+            total_requests = data.get("total_requests", 0)
+            cost = data.get("cost", 0.0)
+
+            # Форматирование токенов (миллионы / тысячи)
+            if total_tokens >= 1_000_000:
+                tokens_str = f"{total_tokens / 1_000_000:.2f}M"
+            elif total_tokens >= 1_000:
+                tokens_str = f"{total_tokens / 1_000:.1f}k"
+            else:
+                tokens_str = str(total_tokens)
+
+            models_lines = []
+            models = data.get("models", {})
+            if models and isinstance(models, dict):
+                sorted_models = sorted(models.items(), key=lambda x: x[1], reverse=True)
+                for m, cnt in sorted_models[:5]:
+                    models_lines.append(f"  • `{m}`: {cnt:,} токенов")
+
+            models_block = ""
+            if models_lines:
+                models_block = "\n\n📊 **Расход по моделям:**\n" + "\n".join(models_lines)
+
+            rate_limit = data.get("rate_limit")
+            rate_block = f"\n⚡ **Лимит скорости:** `{rate_limit}`" if rate_limit else ""
+
+            masked_key = f"{key_to_check[:7]}...{key_to_check[-4:]}" if len(key_to_check) > 11 else key_to_check
+
+            res = (
+                "📈 **Статистика и баланс токенов LiteAI:**\n"
+                f"🔑 Ключ: `{masked_key}`\n\n"
+                f"🪙 **Израсходовано токенов:** `{tokens_str}` ({total_tokens:,})\n"
+                f"💬 **Всего запросов:** `{total_requests:,}`\n"
+                f"💰 **Списано по тарифу:** `{cost:.2f} ₽`"
+                f"{rate_block}"
+                f"{models_block}\n\n"
+                f"🌐 Веб-проверка: [liteai.tech/stats](https://liteai.tech/stats)"
+            )
+            await status_msg.edit_text(res, parse_mode="Markdown", disable_web_page_preview=True)
+        except Exception as e:
+            await status_msg.edit_text(f"⚠️ Ошибка запроса к LiteAI: {e}")
 
     @dp.message(Command("key"))
     async def cmd_key(msg: types.Message):
@@ -262,6 +344,10 @@ def setup_router(dp: Dispatcher, engine: SlugaEngine):
     @dp.message(F.text == "🔬 МРТ проекта")
     async def btn_doctor(msg: types.Message):
         await cmd_doctor(msg)
+
+    @dp.message(F.text.in_(["📊 Баланс токенов", "📊 Баланс", "Статистика токенов", "Баланс"]))
+    async def btn_balance(msg: types.Message):
+        await cmd_stats(msg)
 
     @dp.message(F.text == "🛠️ 116 Навыков")
     async def btn_skills(msg: types.Message):

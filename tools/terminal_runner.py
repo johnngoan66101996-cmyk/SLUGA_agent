@@ -124,3 +124,33 @@ def list_files(directory: str = ".", max_items: int = 50) -> str:
         return "\n".join(items) if items else "Директория пуста."
     except Exception as e:
         return f"Ошибка листинга директории {directory}: {e}"
+
+def replace_file_content(filepath: str, target_content: str, replacement_content: str) -> str:
+    """
+    Хирургический инструмент: точечная замена существующего блока кода или текста (target_content)
+    на новый (replacement_content) в файле без перезаписи всего файла.
+    """
+    path = Path(filepath)
+    if not path.exists():
+        return f"Хирургическая ошибка: файл {filepath} не найден."
+    if not path.is_file():
+        return f"Хирургическая ошибка: путь {filepath} не является файлом."
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read()
+
+        if target_content not in content:
+            return f"Хирургическая ошибка: целевой фрагмент не найден в {filepath}. Убедитесь, что отступы и символы совпадают с содержимым файла."
+
+        count = content.count(target_content)
+        if count > 1:
+            return f"Хирургическое предупреждение: целевой фрагмент найден {count} раз. Добавьте больше контекстных строк (выше или ниже), чтобы замена была однозначной."
+
+        new_content = content.replace(target_content, replacement_content, 1)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+
+        return f"Хирургическая операция успешна: блок в {filepath} аккуратно заменен ({len(replacement_content)} симв.)."
+    except Exception as e:
+        return f"Хирургическая ошибка при модификации {filepath}: {e}"
+
